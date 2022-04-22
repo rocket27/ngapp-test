@@ -60,7 +60,7 @@ function EnterPinModal(props:ViewProps){
   return (
       <div className="fixed top-0 right-0 bottom-0 left-0 bg-modal">
         <div className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] w-96 h-80 rounded-2xl border border-black p-4">
-          <EnterPin />
+          <input type="text" value={pin} readOnly/>
         </div>
       </div>
   )
@@ -74,11 +74,7 @@ function PleaseWait(props:ViewProps){
   }, []);
 
   return (
-      <div className="fixed top-0 right-0 bottom-0 left-0 bg-modal">
-        <div className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] w-96 h-80 rounded-2xl border border-black p-4">
-          Please Wait
-        </div>
-      </div>
+      <div>Please Wait</div>
   )
 }
 
@@ -128,45 +124,45 @@ interface ViewItem{
   args?:any;
 }
 
+let curView:ViewItem|undefined = undefined;
+
 export default function Main() {
   const dispatch = useDispatch();
+
   const rootSocket = useSelector(selectRootSocket);
-  const viewSocket = useSelector(selectViewSocket);
-  const [open, setOpen] = useState(false);
-  const [curView, setCurView] = useState<ViewItem>()
-  const [view, setView] = useState<JSX.Element>();
+  const [view, setView] = useState<JSX.Element|undefined>(undefined);
   const [connected, setConnected] = useState(false);
-/*
-  useEffect(() => {
-    dispatch(
-      setViewSocket(
-        (window as unknown as CustomWindow).ngCreateViewSocket(ViewScreenIds.WAITING_SCREEN)
-      )
-    );
-  }, [dispatch]);
-*/
+
+
   useEffect(() => {
 
-    rootSocket?.onConnected(() => console.log('Connected to root socket'));
+    rootSocket?.onConnected(() => {
+      setConnected(true);
+      console.log('Connected to root socket')});
+
+    rootSocket?.onDisconnected(() => {
+      setConnected(false);
+      console.log('Disconnected from root socket')
+        setView(undefined);
+      }
+    );
 
 
     //  на ng_createView создаем NgSocket соответсвующий запрошенному id
     rootSocket?.on("ng_createView", ({id}:{id:string})=>{
       let ngSocket = (window as unknown as CustomWindow).ngCreateViewSocket(id);
       // вешаем на onActivate получение агрументов, и если необходимо делаем что то длительное.
-      ngSocket.onActivate((args)=>{
-        // тут в принципе нам надо обновить только args в curView
-        setCurView({viewId:id, ngSocket:ngSocket, args:args})
+      ngSocket.onActivate(async (args)=>{
+
+        // нужна синхронная альтернатива curView useState не обновляется уже при вызове showView!
         console.log(`Create view ${id} with args ${JSON.stringify(args)}`);
+        curView   = {viewId:id, ngSocket:ngSocket, args:args};
       })
 
-
-      // запоминаем данные для последующего show, в принципе ничего не мешает полностью создать view
-      // но удобнее иногда создавать view когда args уже получены.
     });
 
     rootSocket?.on('ng_showView', ({ id }: { id: string }) => {
-      console.log('Main rootSocket onShowView', id);
+      console.log(`showView ${id} ${JSON.stringify(curView)}`);
 
       // Временно поставить "!" не охото правильно расставлять типизацию
       let view = createComponent({
@@ -174,6 +170,7 @@ export default function Main() {
         ngSocket:curView!.ngSocket,
         args:curView?.args});
 
+      console.log(view);
       setView(view);
     });
   }, []);
