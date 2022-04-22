@@ -20,6 +20,7 @@ export default function App() {
   }, [dispatch]);
 
   useEffect(() => {
+    /*
     rootSocket?.onConnected(() => console.log('Connected to root socket'));
 
     rootSocket?.on('ng_start', (d: any) => console.log('rootSocket onStart', d));
@@ -41,6 +42,7 @@ export default function App() {
 
     rootSocket?.on('ng_destroyView', (d: any) => console.log('rootSocket onDestroyView', d));
     rootSocket?.onDisconnected(() => console.log('Disconnected from root socket'));
+     */
   }, [rootSocket]);
 
   return (
